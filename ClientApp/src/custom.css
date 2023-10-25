@@ -1,0 +1,33 @@
+/* Provide sufficient contrast against white background */
+a {
+  color: #0366d6;
+}
+
+code {
+  color: #E01A76;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.field {
+  width: calc(10*26px);
+  height: calc(10*26px);
+  margin: 10px;
+  float: left;
+}
+
+.cell {
+  height: 20px;
+  width: 20px;
+  margin: 3px;
+  float: left;
+  background-color: gray;
+}
+
+.ship {
+  background-color: orange;
+}
