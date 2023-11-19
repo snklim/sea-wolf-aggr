@@ -15,6 +15,8 @@ namespace SeaWolfAggr
             if (_game != null) throw new ArgumentException();
 
             var gameId = System.Guid.NewGuid();
+            var firstPlayerId = System.Guid.NewGuid();
+            var secondPlayerId = System.Guid.NewGuid();
 
             _events.Add(ApplyEvent(new GameCreated
             {
@@ -24,54 +26,109 @@ namespace SeaWolfAggr
             _events.Add(ApplyEvent(new FirstPlayerCreated
             {
                 GameId = gameId,
-                PlayerId = System.Guid.NewGuid()
+                PlayerId = firstPlayerId
             }));
 
             _events.Add(ApplyEvent(new SecondPlayerCreated
             {
                 GameId = gameId,
-                PlayerId = System.Guid.NewGuid()
+                PlayerId = secondPlayerId
             }));
 
             _events.Add(ApplyEvent(new FirstPlayerOwnFieldCreated
             {
                 GameId = gameId,
                 FieldId = System.Guid.NewGuid(),
-                Cells = GenerateOwnCells()
+                Cells = GenerateOwnCells(firstPlayerId)
             }));
 
             _events.Add(ApplyEvent(new FirstPlayerEnemyFieldCreated
             {
                 GameId = gameId,
                 FieldId = System.Guid.NewGuid(),
-                Cells = GenerateEnemyCells()
+                Cells = GenerateCells(secondPlayerId)
             }));
 
             _events.Add(ApplyEvent(new SecondPlayerOwnFieldCreated
             {
                 GameId = gameId,
                 FieldId = System.Guid.NewGuid(),
-                Cells = GenerateOwnCells()
+                Cells = GenerateOwnCells(secondPlayerId)
             }));
 
             _events.Add(ApplyEvent(new SecondPlayerEnemyFieldCreated
             {
                 GameId = gameId,
                 FieldId = System.Guid.NewGuid(),
-                Cells = GenerateEnemyCells()
+                Cells = GenerateCells(firstPlayerId)
+            }));
+
+            _events.Add(ApplyEvent(new CurrentPlayerSet
+            {
+                PlayerId = firstPlayerId
             }));
 
             return _game;
         }
 
-        private IEnumerable<Cell> GenerateOwnCells()
+        public Game MovePlayer(MovePlayerCommand cmd)
         {
-            var cells = Enumerable.Range(0, 10)
-                .SelectMany(col => Enumerable.Range(0, 10)
-                    .Select(row => new Cell(new Pos(col, row))))
-                .ToArray();
+            if (cmd.PlayerId == _game.CurrentPlayerId) throw new ArgumentException();
+
+            _events.Clear();
+
+            var player = new[]
+            {
+                 _game.FirstPlayer,
+                 _game.SecondPlayer
+            }.First(p => p.Id == cmd.PlayerId);
+
+            var cell = player.OwnField.Cells.First(c => c.Pos == cmd.Pos);
+            var affectedCells = new List<Cell>() { cell };
+
+            if (cell.CellType == CellType.Ship && player.Ships[cell.ShipIndex] == 1)
+            {
+                affectedCells.AddRange(player.OwnField.Cells.Where(c => cell.Border.Any(b => b == c.Pos)));
+            }
+
+            affectedCells.ForEach(c => c.IsDestroyed = true);
+
+            if (_game.CurrentPlayerId == _game.FirstPlayer.Id)
+            {
+                _events.Add(ApplyEvent(new FirstPlayerEnemyFieldUpdated
+                {
+                    Cells = affectedCells.ToArray()
+                }));
+
+                _events.Add(ApplyEvent(new SecondPlayerOwnFieldUpdated
+                {
+                    Cells = affectedCells.ToArray(),
+                    ShipIndex = cell.ShipIndex
+                }));
+            }
+            else
+            {
+                _events.Add(ApplyEvent(new SecondPlayerEnemyFieldUpdated
+                {
+                    Cells = affectedCells.ToArray()
+                }));
+
+                _events.Add(ApplyEvent(new FirstPlayerOwnFieldUpdated
+                {
+                    Cells = affectedCells.ToArray(),
+                    ShipIndex = cell.ShipIndex
+                }));
+            }
+
+            return _game;
+        }
+
+        private IEnumerable<Cell> GenerateOwnCells(Guid playerId)
+        {
+            var cells = GenerateCells(playerId);
 
             var rnd = new Random();
+            var shipIndex = 1;
 
             foreach (var ship in new[] { 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 })
             {
@@ -83,23 +140,27 @@ namespace SeaWolfAggr
                     var deltaCol = isCol ? 1 : 0;
                     var deltaRow = isCol ? 0 : 1;
                     var canFit = true;
-
                     var shipCells = new List<Cell>();
+                    var border = new List<Pos>();
 
                     for (var i = 0; i < ship; i++)
                     {
                         var pos = new Pos(col, row);
                         var cell = cells.FirstOrDefault(c => c.Pos == pos && c.CellType == CellType.Empty);
+
                         if (cell == null)
                         {
                             canFit = false;
                             break;
                         }
-                        var neighbors = new[]{
+
+                        var neighbors = new[]
+                        {
                             new Pos(col-1, row-1),new Pos(col-1, row),new Pos(col-1, row+1),
                             new Pos(col, row-1),new Pos(col, row+1),
                             new Pos(col+1, row-1),new Pos(col+1, row),new Pos(col+1, row+1),
-                            };
+                        };
+
                         foreach (var neighbor in neighbors)
                         {
                             var neighborCell = cells.FirstOrDefault(c => c.Pos == neighbor);
@@ -115,29 +176,36 @@ namespace SeaWolfAggr
                             break;
                         }
                         shipCells.Add(cell);
+                        border.AddRange(neighbors);
                         col += deltaCol;
                         row += deltaRow;
                     }
 
                     if (!canFit) continue;
 
+                    border = border.Where(b => shipCells.All(c => c.Pos != b)).Where(b => cells.Any(c => c.Pos == b)).ToList();
+
                     foreach (var cell in shipCells)
                     {
                         cell.CellType = CellType.Ship;
+                        cell.ShipLength = ship;
+                        cell.ShipIndex = shipIndex;
+                        cell.Border = border;
                     }
 
                     break;
                 }
+                shipIndex++;
             }
 
             return cells;
         }
 
-        private IEnumerable<Cell> GenerateEnemyCells()
+        private IEnumerable<Cell> GenerateCells(Guid playerId)
         {
             var cells = Enumerable.Range(0, 10)
                 .SelectMany(col => Enumerable.Range(0, 10)
-                    .Select(row => new Cell(new Pos(col, row))))
+                    .Select(row => new Cell(new Pos(col, row)) { PlayerId = playerId }))
                 .ToArray();
 
             return cells;
@@ -213,168 +281,40 @@ namespace SeaWolfAggr
             });
             return @event;
         }
-    }
 
-    public abstract class Entity
-    {
-        public System.Guid Id { get; set; }
-    }
-
-    public class Game : Entity
-    {
-        public Player FirstPlayer { get; private set; }
-        public Player SecondPlayer { get; private set; }
-
-        public void AddFirstPlayer(Player player)
+        private DomainEvent ApplyEvent(CurrentPlayerSet @event)
         {
-            FirstPlayer = player;
+            _game.SetCurrentPlayer(@event.PlayerId);
+            return @event;
         }
 
-        public void AddSecondPlayer(Player player)
+        private DomainEvent ApplyEvent(FirstPlayerOwnFieldUpdated @event)
         {
-            SecondPlayer = player;
+            _game.UpdateFirstPlayerOwnField(@event.Cells);
+            return @event;
         }
 
-        public void AddFirstPlayerOwnField(Field field)
+        private DomainEvent ApplyEvent(FirstPlayerEnemyFieldUpdated @event)
         {
-            FirstPlayer.AddOwnField(field);
+            _game.UpdateFirstPlayerEnemyField(@event.Cells);
+            return @event;
         }
 
-        public void AddFirstPlayerEnemyField(Field field)
+        private DomainEvent ApplyEvent(SecondPlayerOwnFieldUpdated @event)
         {
-            FirstPlayer.AddEnemyField(field);
+            _game.UpdateSecondPlayerOwnField(@event.Cells);
+            return @event;
         }
 
-        public void AddSecondPlayerOwnField(Field field)
+        private DomainEvent ApplyEvent(SecondPlayerEnemyFieldUpdated @event)
         {
-            SecondPlayer.AddOwnField(field);
-        }
-
-        public void AddSecondPlayerEnemyField(Field field)
-        {
-            SecondPlayer.AddEnemyField(field);
+            _game.UpdateSecondPlayerEnemyField(@event.Cells);
+            return @event;
         }
     }
 
-    public class Player : Entity
+    public class ShipDetails
     {
-        public Field OwnFields { get; private set; }
-
-        public Field EnemyField { get; private set; }
-
-        public void AddOwnField(Field field)
-        {
-            OwnFields = field;
-        }
-
-        public void AddEnemyField(Field field)
-        {
-            EnemyField = field;
-        }
-    }
-
-    public class Field : Entity
-    {
-        public IEnumerable<Cell> Cells { get; private set; }
-        public Field AddCells(IEnumerable<Cell> cells)
-        {
-            Cells = cells;
-            return this;
-        }
-    }
-
-    public class Pos
-    {
-        public int Col { get; private set; }
-        public int Row { get; private set; }
-        public Pos(int col, int row)
-        {
-            Col = col;
-            Row = row;
-        }
-
-        public static bool operator ==(Pos pos1, Pos pos2)
-        {
-            if (pos1 is null || pos2 is null) return false;
-            return pos1.Col == pos2.Col && pos1.Row == pos2.Row;
-        }
-
-        public static bool operator !=(Pos pos1, Pos pos2)
-        {
-            return !(pos1 == pos2);
-        }
-
-        public override bool Equals(object obj)
-        {
-            return this == obj as Pos;
-        }
-
-        public override int GetHashCode()
-        {
-            return Col * 100 + Row;
-        }
-    }
-
-    public class Cell
-    {
-        public Pos Pos { get; private set; }
-        public CellType CellType { get; set; } = CellType.Empty;
-        public bool IsDestroyed { get; set; } = false;
-        public Cell(Pos pos)
-        {
-            Pos = pos;
-        }
-    }
-
-    public enum CellType
-    {
-        Empty,
-        Ship
-    }
-
-    public abstract class DomainEvent
-    {
-
-    }
-
-    public abstract class GameDomainEvent : DomainEvent
-    {
-        public System.Guid GameId { get; set; }
-    }
-
-    public class GameCreated : GameDomainEvent
-    {
-    }
-
-    public class FirstPlayerCreated : GameDomainEvent
-    {
-        public System.Guid PlayerId { get; set; }
-    }
-
-    public class SecondPlayerCreated : GameDomainEvent
-    {
-        public System.Guid PlayerId { get; set; }
-    }
-
-    public abstract class FieldCreated : GameDomainEvent
-    {
-        public System.Guid FieldId { get; set; }
-        public IEnumerable<Cell> Cells { get; set; }
-    }
-
-    public class FirstPlayerOwnFieldCreated : FieldCreated
-    {
-    }
-
-    public class FirstPlayerEnemyFieldCreated : FieldCreated
-    {
-    }
-
-    public class SecondPlayerOwnFieldCreated : FieldCreated
-    {
-    }
-
-    public class SecondPlayerEnemyFieldCreated : FieldCreated
-    {
+        public int AliveCells { get; set; }
     }
 }

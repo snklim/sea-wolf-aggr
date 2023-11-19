@@ -26,8 +26,21 @@ code {
   margin: 3px;
   float: left;
   background-color: gray;
+  color: red;
+}
+
+.cell svg {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  top: -4px;
+  left: -4px;
 }
 
 .ship {
   background-color: orange;
+}
+
+.destroyed {
+  background-color: red;
 }
