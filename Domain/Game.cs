@@ -10,6 +10,11 @@ namespace SeaWolfAggr
         public Player FirstPlayer { get; private set; }
         public Player SecondPlayer { get; private set; }
 
+        public void ChangeCurrentPlayer(Guid currentPlayerId)
+        {
+            CurrentPlayerId = currentPlayerId;
+        }
+
         public void AddFirstPlayer(Player player)
         {
             FirstPlayer = player;
@@ -78,11 +83,6 @@ namespace SeaWolfAggr
                 t.IsDestroyed = s.IsDestroyed;
                 t.CellType = s.CellType;
             }
-        }
-
-        public void SetCurrentPlayer(Guid playerId)
-        {
-            CurrentPlayerId = playerId;
         }
     }
 }

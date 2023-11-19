@@ -1,12 +1,10 @@
 using System;
 
-namespace SeaWolfAggr
+namespace SeaWolfAggr.Controllers
 {
-
-    public class MovePlayerCommand
+    public class GameRequestDto
     {
         public Guid GameId { get; set; }
         public string Player { get; set; }
-        public Pos Pos { get; set; }
     }
 }

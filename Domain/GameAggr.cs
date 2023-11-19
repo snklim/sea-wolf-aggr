@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SeaWolfAggr.Domain.Events;
 
 namespace SeaWolfAggr
 {
@@ -8,11 +9,11 @@ namespace SeaWolfAggr
     {
         private List<DomainEvent> _events = new List<DomainEvent>();
 
-        private Game _game;
+        public Game Game { get; private set; }
 
         public Game CreateGame()
         {
-            if (_game != null) throw new ArgumentException();
+            if (Game != null) throw new ArgumentException();
 
             var gameId = System.Guid.NewGuid();
             var firstPlayerId = System.Guid.NewGuid();
@@ -63,25 +64,20 @@ namespace SeaWolfAggr
                 Cells = GenerateCells(firstPlayerId)
             }));
 
-            _events.Add(ApplyEvent(new CurrentPlayerSet
-            {
-                PlayerId = firstPlayerId
-            }));
+            _events.Add(ApplyEvent(new CurrentPlayerChanged
+                {
+                    CurrentPlayerId = firstPlayerId
+                }));
 
-            return _game;
+            return Game;
         }
 
         public Game MovePlayer(MovePlayerCommand cmd)
         {
-            if (cmd.PlayerId == _game.CurrentPlayerId) throw new ArgumentException();
+            var player = cmd.Player == "first" ? Game.SecondPlayer : Game.FirstPlayer;
+            if (player.Id == Game.CurrentPlayerId) return Game;
 
             _events.Clear();
-
-            var player = new[]
-            {
-                 _game.FirstPlayer,
-                 _game.SecondPlayer
-            }.First(p => p.Id == cmd.PlayerId);
 
             var cell = player.OwnField.Cells.First(c => c.Pos == cmd.Pos);
             var affectedCells = new List<Cell>() { cell };
@@ -93,7 +89,7 @@ namespace SeaWolfAggr
 
             affectedCells.ForEach(c => c.IsDestroyed = true);
 
-            if (_game.CurrentPlayerId == _game.FirstPlayer.Id)
+            if (Game.CurrentPlayerId == Game.FirstPlayer.Id)
             {
                 _events.Add(ApplyEvent(new FirstPlayerEnemyFieldUpdated
                 {
@@ -120,7 +116,15 @@ namespace SeaWolfAggr
                 }));
             }
 
-            return _game;
+            if (cell.CellType == CellType.Empty)
+            {
+                _events.Add(ApplyEvent(new CurrentPlayerChanged
+                {
+                    CurrentPlayerId = cmd.Player == "first" ? Game.SecondPlayer.Id : Game.FirstPlayer.Id
+                }));
+            }
+
+            return Game;
         }
 
         private IEnumerable<Cell> GenerateOwnCells(Guid playerId)
@@ -211,9 +215,15 @@ namespace SeaWolfAggr
             return cells;
         }
 
+        private DomainEvent ApplyEvent(CurrentPlayerChanged @event)
+        {
+            Game.ChangeCurrentPlayer(@event.CurrentPlayerId);
+            return @event;
+        }
+
         private DomainEvent ApplyEvent(FirstPlayerOwnFieldCreated @event)
         {
-            _game.AddFirstPlayerOwnField(
+            Game.AddFirstPlayerOwnField(
                 new Field
                 {
                     Id = @event.FieldId
@@ -224,7 +234,7 @@ namespace SeaWolfAggr
 
         private DomainEvent ApplyEvent(FirstPlayerEnemyFieldCreated @event)
         {
-            _game.AddFirstPlayerEnemyField(
+            Game.AddFirstPlayerEnemyField(
                 new Field
                 {
                     Id = @event.FieldId
@@ -235,7 +245,7 @@ namespace SeaWolfAggr
 
         private DomainEvent ApplyEvent(SecondPlayerOwnFieldCreated @event)
         {
-            _game.AddSecondPlayerOwnField(
+            Game.AddSecondPlayerOwnField(
                 new Field
                 {
                     Id = @event.FieldId
@@ -246,7 +256,7 @@ namespace SeaWolfAggr
 
         private DomainEvent ApplyEvent(SecondPlayerEnemyFieldCreated @event)
         {
-            _game.AddSecondPlayerEnemyField(
+            Game.AddSecondPlayerEnemyField(
                 new Field
                 {
                     Id = @event.FieldId
@@ -257,7 +267,7 @@ namespace SeaWolfAggr
 
         private DomainEvent ApplyEvent(GameCreated @event)
         {
-            _game = new Game
+            Game = new Game
             {
                 Id = @event.GameId
             };
@@ -266,7 +276,7 @@ namespace SeaWolfAggr
 
         private DomainEvent ApplyEvent(FirstPlayerCreated @event)
         {
-            _game.AddFirstPlayer(new Player
+            Game.AddFirstPlayer(new Player
             {
                 Id = @event.PlayerId
             });
@@ -275,40 +285,34 @@ namespace SeaWolfAggr
 
         private DomainEvent ApplyEvent(SecondPlayerCreated @event)
         {
-            _game.AddSecondPlayer(new Player
+            Game.AddSecondPlayer(new Player
             {
                 Id = @event.PlayerId
             });
             return @event;
         }
 
-        private DomainEvent ApplyEvent(CurrentPlayerSet @event)
-        {
-            _game.SetCurrentPlayer(@event.PlayerId);
-            return @event;
-        }
-
         private DomainEvent ApplyEvent(FirstPlayerOwnFieldUpdated @event)
         {
-            _game.UpdateFirstPlayerOwnField(@event.Cells);
+            Game.UpdateFirstPlayerOwnField(@event.Cells);
             return @event;
         }
 
         private DomainEvent ApplyEvent(FirstPlayerEnemyFieldUpdated @event)
         {
-            _game.UpdateFirstPlayerEnemyField(@event.Cells);
+            Game.UpdateFirstPlayerEnemyField(@event.Cells);
             return @event;
         }
 
         private DomainEvent ApplyEvent(SecondPlayerOwnFieldUpdated @event)
         {
-            _game.UpdateSecondPlayerOwnField(@event.Cells);
+            Game.UpdateSecondPlayerOwnField(@event.Cells);
             return @event;
         }
 
         private DomainEvent ApplyEvent(SecondPlayerEnemyFieldUpdated @event)
         {
-            _game.UpdateSecondPlayerEnemyField(@event.Cells);
+            Game.UpdateSecondPlayerEnemyField(@event.Cells);
             return @event;
         }
     }
