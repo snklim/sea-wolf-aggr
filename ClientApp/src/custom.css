@@ -26,7 +26,7 @@ code {
   margin: 3px;
   float: left;
   background-color: gray;
-  color: red;
+  color: white;
 }
 
 .cell svg {
@@ -34,7 +34,7 @@ code {
   height: 20px;
   position: relative;
   top: -4px;
-  left: -4px;
+  left: -5px;
 }
 
 .ship {
