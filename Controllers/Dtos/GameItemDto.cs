@@ -2,7 +2,7 @@ using System;
 
 namespace SeaWolfAggr.Controllers
 {
-    public class GameDto
+    public class GameItemDto
     {
         public Guid GameId { get; set; }
         public Guid FirstPlayerId { get; set; }

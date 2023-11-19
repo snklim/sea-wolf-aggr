@@ -6,15 +6,13 @@ import { icon } from '@fortawesome/fontawesome-svg-core/import.macro'
 export interface Game {
     gameId: string,
     firstPlayerId: string,
-    secondPlayerId: string,
-    playAs: string
+    secondPlayerId: string
 }
 
 export interface Cell {
-    cellType: number;
+    cellType: string;
     pos: Pos;
     isDestroyed: boolean;
-    playerId: string;
 }
 
 export interface Pos {
@@ -22,16 +20,20 @@ export interface Pos {
     row: number;
 }
 
-export default class Games extends React.PureComponent<{}, { ownField: Cell[], enemyField: Cell[], games: Game[], player: string, gameId: string }> {
+export default class Games extends React.PureComponent<{}, { ownField: Cell[], enemyField: Cell[], games: Game[], playerId: string, gameId: string }> {
     public state = {
         ownField: [],
         enemyField: [],
         games: [],
-        player: 'first',
+        playerId: '',
         gameId: ''
     };
 
     public componentDidMount() {
+        this.getAllGames()
+    }
+
+    public getAllGames() {
         fetch(`game/getall`, { method: 'GET' })
             .then(response => response.json() as Promise<Game[]>).then(data => this.setState({
                 games: data
@@ -42,26 +44,29 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
         fetch(`game`, { method: 'POST' })
             .then(response => response.json() as Promise<Cell[][]>)
             .then(data => {
-                this.setState({
-                    ownField: data[0],
-                    enemyField: data[1]
-                });
+                // this.setState({
+                //     ownField: data[0],
+                //     enemyField: data[1]
+                // });
+                //console.log(this)
+                
+                this.getAllGames()
             });
     }
 
-    public play(gameId: string, player: string) {
+    public play(gameId: string, playerId: string) {
         this.setState({
             gameId: gameId,
-            player: player
+            playerId: playerId
         });
-        this.getGame(gameId, player)
+        this.getGame(gameId, playerId)
     }
 
-    public getGame(gameId: string, player: string) {
+    public getGame(gameId: string, playerId: string) {
         fetch(`game/getgame`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gameId: gameId, player: player })
+            body: JSON.stringify({ gameId: gameId, playerId: playerId })
         })
             .then(response => response.json() as Promise<Cell[][]>)
             .then(data => {
@@ -76,33 +81,35 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
         fetch(`game`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gameId: this.state.gameId, player: this.state.player, pos: cell.pos })
+            body: JSON.stringify({ gameId: this.state.gameId, playerId: this.state.playerId, pos: cell.pos })
         })
-            .then(response => response.json() as Promise<Cell[][]>)
+            .then(response => this.getGame(this.state.gameId, this.state.playerId))
             .then(data => {
                 // this.setState({
                 //     ownField: data[0],
                 //     enemyField: data[1]
                 // });
 
-                this.getGame(this.state.gameId, this.state.player)
+                this.getGame(this.state.gameId, this.state.playerId)
             });
     }
 
     public render() {
         return (
             <div>
-                <div>{this.state.player}</div>
+                <div>{this.state.playerId}</div>
                 <div>
-                    <button onClick={this.newGame}>New Game</button>
+                    <button onClick={() => this.newGame()}>New Game</button>
                 </div>
                 <div>
                     <table>
                         {
                             this.state.games.map((game: Game) => 
                                 <tr>
-                                    <td><button onClick={() => this.play(game.gameId, 'first')}>First player</button></td>
-                                    <td><button onClick={() => this.play(game.gameId, 'second')}>Second player</button></td>
+                                    <td><button className={game.firstPlayerId == this.state.playerId ? 'ship' : ''} 
+                                        onClick={() => this.play(game.gameId, game.firstPlayerId)}>First player</button></td>
+                                    <td><button className={game.secondPlayerId == this.state.playerId ? 'ship' : ''}
+                                        onClick={() => this.play(game.gameId, game.secondPlayerId)}>Second player</button></td>
                                 </tr>)
                         }
                     </table>
@@ -110,7 +117,7 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
                 <div className='field'>
                     {
                         this.state.ownField.map((cell: Cell) =>
-                            <div className={'cell ' + (cell.cellType == 1 ? 'ship' : '')}>
+                            <div className={'cell ' + (cell.cellType == 'ship' ? 'ship' : '')}>
                                 {cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>}
                             </div>)
                     }
@@ -120,7 +127,7 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
                         this.state.enemyField.map((cell: Cell) =>
                             <div onClick={() => this.move(cell)}
                                 className={'cell '
-                                    + (cell.cellType == 1 ? 'ship' : '')}>
+                                    + (cell.cellType == 'ship' ? 'ship' : '')}>
                                 {cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>}
                             </div>)
                     }

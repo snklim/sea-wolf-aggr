@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using SeaWolfAggr.Controllers.Dtos;
 
 namespace SeaWolfAggr.Controllers
 {
@@ -13,18 +14,18 @@ namespace SeaWolfAggr.Controllers
         private static Dictionary<Guid, GameAggr> _games = new Dictionary<Guid, GameAggr>();
 
         [HttpGet("getall")]
-        public IEnumerable<GameDto> GetAll()
+        public IEnumerable<GameItemDto> GetAll()
         {
-            return _games.Select(x => new GameDto { GameId = x.Key, FirstPlayerId = x.Value.Game.FirstPlayer.Id, SecondPlayerId = x.Value.Game.SecondPlayer.Id });
+            return _games.Select(x => new GameItemDto { GameId = x.Key, FirstPlayerId = x.Value.Game.FirstPlayer.Id, SecondPlayerId = x.Value.Game.SecondPlayer.Id });
         }
 
         [HttpPost("getgame")]
         public object GetGame(GameRequestDto request)
         {
             var gameAggr = _games.FirstOrDefault(x => x.Key == request.GameId).Value;
-            return request.Player == "first"
-                ? new[] { gameAggr.Game.FirstPlayer.OwnField.Cells, gameAggr.Game.FirstPlayer.EnemyField.Cells }
-                : new[] { gameAggr.Game.SecondPlayer.OwnField.Cells, gameAggr.Game.SecondPlayer.EnemyField.Cells };
+            return request.PlayerId == gameAggr.Game.FirstPlayer.Id
+                ? new[] { gameAggr.Game.FirstPlayer.OwnField.Cells.Select(CellToCellDto), gameAggr.Game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto) }
+                : new[] { gameAggr.Game.SecondPlayer.OwnField.Cells.Select(CellToCellDto), gameAggr.Game.SecondPlayer.EnemyField.Cells.Select(CellToCellDto) };
         }
 
         [HttpPost]
@@ -33,7 +34,7 @@ namespace SeaWolfAggr.Controllers
             _gameAggr = new GameAggr();
             var game = _gameAggr.CreateGame();
             _games.Add(_gameAggr.Game.Id, _gameAggr);
-            return new[] { game.FirstPlayer.OwnField.Cells, game.FirstPlayer.EnemyField.Cells };
+            return new[] { game.FirstPlayer.OwnField.Cells.Select(CellToCellDto), game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto) };
         }
 
         [HttpPut]
@@ -41,7 +42,21 @@ namespace SeaWolfAggr.Controllers
         {
             var gameAggr = _games.FirstOrDefault(x => x.Key == cmd.GameId).Value;
             var game = gameAggr.MovePlayer(cmd);
-            return new[] { game.FirstPlayer.OwnField.Cells, game.FirstPlayer.EnemyField.Cells };
+            return null;
+        }
+
+        private static CellDto CellToCellDto(Cell cell)
+        {
+            return new CellDto
+            {
+                CellType = cell.CellType == CellType.Ship ? "ship" : "",
+                IsDestroyed = cell.IsDestroyed,
+                Pos = new PosDto
+                {
+                    Col = cell.Pos.Col,
+                    Row = cell.Pos.Row
+                }
+            };
         }
     }
 }

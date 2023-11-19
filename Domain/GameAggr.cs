@@ -74,7 +74,7 @@ namespace SeaWolfAggr
 
         public Game MovePlayer(MovePlayerCommand cmd)
         {
-            var player = cmd.Player == "first" ? Game.SecondPlayer : Game.FirstPlayer;
+            var player = cmd.PlayerId == Game.FirstPlayer.Id ? Game.SecondPlayer : Game.FirstPlayer;
             if (player.Id == Game.CurrentPlayerId) return Game;
 
             _events.Clear();
@@ -120,7 +120,7 @@ namespace SeaWolfAggr
             {
                 _events.Add(ApplyEvent(new CurrentPlayerChanged
                 {
-                    CurrentPlayerId = cmd.Player == "first" ? Game.SecondPlayer.Id : Game.FirstPlayer.Id
+                    CurrentPlayerId = cmd.PlayerId == Game.FirstPlayer.Id ? Game.SecondPlayer.Id : Game.FirstPlayer.Id
                 }));
             }
 
