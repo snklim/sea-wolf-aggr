@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { icon } from '@fortawesome/fontawesome-svg-core/import.macro'
 
-export interface Game {
+export interface GameItem {
     gameId: string,
     firstPlayerId: string,
     secondPlayerId: string
@@ -20,13 +20,20 @@ export interface Pos {
     row: number;
 }
 
-export default class Games extends React.PureComponent<{}, { ownField: Cell[], enemyField: Cell[], games: Game[], playerId: string, gameId: string }> {
+export interface Game {
+    currentPlayerId: string,
+    ownField: Cell[],
+    enemyField: Cell[]
+}
+
+export default class Games extends React.PureComponent<{}, { ownField: Cell[], enemyField: Cell[], games: GameItem[], playerId: string, gameId: string, currentPlayerId: string }> {
     public state = {
         ownField: [],
         enemyField: [],
         games: [],
         playerId: '',
-        gameId: ''
+        gameId: '',
+        currentPlayerId: ''
     };
 
     public componentDidMount() {
@@ -35,14 +42,14 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
 
     public getAllGames() {
         fetch(`game/getall`, { method: 'GET' })
-            .then(response => response.json() as Promise<Game[]>).then(data => this.setState({
+            .then(response => response.json() as Promise<GameItem[]>).then(data => this.setState({
                 games: data
             }))
     }
 
     public newGame() {
         fetch(`game`, { method: 'POST' })
-            .then(response => response.json() as Promise<Cell[][]>)
+            .then(response => response.json() as Promise<Game>)
             .then(data => {
                 // this.setState({
                 //     ownField: data[0],
@@ -68,11 +75,12 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ gameId: gameId, playerId: playerId })
         })
-            .then(response => response.json() as Promise<Cell[][]>)
+            .then(response => response.json() as Promise<Game>)
             .then(data => {
                 this.setState({
-                    ownField: data[0],
-                    enemyField: data[1]
+                    currentPlayerId: data.currentPlayerId,
+                    ownField: data.ownField,
+                    enemyField: data.enemyField
                 });
             });
     }
@@ -97,14 +105,14 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
     public render() {
         return (
             <div>
-                <div>{this.state.playerId}</div>
+                <div>{this.state.playerId==this.state.currentPlayerId ? 'Your turn' : 'Opponent turn'}</div>
                 <div>
                     <button onClick={() => this.newGame()}>New Game</button>
                 </div>
                 <div>
                     <table>
                         {
-                            this.state.games.map((game: Game) => 
+                            this.state.games.map((game: GameItem) => 
                                 <tr>
                                     <td><button className={game.firstPlayerId == this.state.playerId ? 'ship' : ''} 
                                         onClick={() => this.play(game.gameId, game.firstPlayerId)}>First player</button></td>

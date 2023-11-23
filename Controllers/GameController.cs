@@ -24,21 +24,35 @@ namespace SeaWolfAggr.Controllers
         {
             var gameAggr = _games.FirstOrDefault(x => x.Key == request.GameId).Value;
             return request.PlayerId == gameAggr.Game.FirstPlayer.Id
-                ? new[] { gameAggr.Game.FirstPlayer.OwnField.Cells.Select(CellToCellDto), gameAggr.Game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto) }
-                : new[] { gameAggr.Game.SecondPlayer.OwnField.Cells.Select(CellToCellDto), gameAggr.Game.SecondPlayer.EnemyField.Cells.Select(CellToCellDto) };
+                ? new GameDto
+                {
+                    CurrentPlayerId = gameAggr.Game.CurrentPlayerId,
+                    OwnField = gameAggr.Game.FirstPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
+                    EnemyField = gameAggr.Game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray()
+                }
+                : new GameDto
+                {
+                    CurrentPlayerId = gameAggr.Game.CurrentPlayerId,
+                    OwnField = gameAggr.Game.SecondPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
+                    EnemyField = gameAggr.Game.SecondPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray()
+                };
         }
 
         [HttpPost]
-        public object Post()
+        public GameDto Post()
         {
             _gameAggr = new GameAggr();
             var game = _gameAggr.CreateGame();
             _games.Add(_gameAggr.Game.Id, _gameAggr);
-            return new[] { game.FirstPlayer.OwnField.Cells.Select(CellToCellDto), game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto) };
+            return new GameDto
+            {
+                OwnField = game.FirstPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
+                EnemyField = game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray()
+            };
         }
 
         [HttpPut]
-        public object Put(MovePlayerCommand cmd)
+        public GameDto Put(MovePlayerCommand cmd)
         {
             var gameAggr = _games.FirstOrDefault(x => x.Key == cmd.GameId).Value;
             var game = gameAggr.MovePlayer(cmd);
