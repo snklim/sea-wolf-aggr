@@ -23,17 +23,22 @@ export interface Pos {
 export interface Game {
     currentPlayerId: string,
     ownField: Cell[],
-    enemyField: Cell[]
+    enemyField: Cell[],
+    ships: Cell[][]
 }
 
-export default class Games extends React.PureComponent<{}, { ownField: Cell[], enemyField: Cell[], games: GameItem[], playerId: string, gameId: string, currentPlayerId: string }> {
+export default class Games extends React.PureComponent<{},
+    {
+        ownField: Cell[], enemyField: Cell[], games: GameItem[], playerId: string, gameId: string, currentPlayerId: string, ships: Cell[][]
+    }> {
     public state = {
         ownField: [],
         enemyField: [],
         games: [],
         playerId: '',
         gameId: '',
-        currentPlayerId: ''
+        currentPlayerId: '',
+        ships: [[]]
     };
 
     public componentDidMount() {
@@ -56,7 +61,7 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
                 //     enemyField: data[1]
                 // });
                 //console.log(this)
-                
+
                 this.getAllGames()
             });
     }
@@ -80,7 +85,8 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
                 this.setState({
                     currentPlayerId: data.currentPlayerId,
                     ownField: data.ownField,
-                    enemyField: data.enemyField
+                    enemyField: data.enemyField,
+                    ships: data.ships
                 });
             });
     }
@@ -105,16 +111,16 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
     public render() {
         return (
             <div>
-                <div>{this.state.playerId==this.state.currentPlayerId ? 'Your turn' : 'Opponent turn'}</div>
+                <div>{this.state.playerId == this.state.currentPlayerId ? 'Your turn' : 'Opponent turn'}</div>
                 <div>
                     <button onClick={() => this.newGame()}>New Game</button>
                 </div>
                 <div>
                     <table>
                         {
-                            this.state.games.map((game: GameItem) => 
+                            this.state.games.map((game: GameItem) =>
                                 <tr>
-                                    <td><button className={game.firstPlayerId == this.state.playerId ? 'ship' : ''} 
+                                    <td><button className={game.firstPlayerId == this.state.playerId ? 'ship' : ''}
                                         onClick={() => this.play(game.gameId, game.firstPlayerId)}>First player</button></td>
                                     <td><button className={game.secondPlayerId == this.state.playerId ? 'ship' : ''}
                                         onClick={() => this.play(game.gameId, game.secondPlayerId)}>Second player</button></td>
@@ -122,24 +128,36 @@ export default class Games extends React.PureComponent<{}, { ownField: Cell[], e
                         }
                     </table>
                 </div>
-                <div className='field'>
-                    {
-                        this.state.ownField.map((cell: Cell) =>
-                            <div className={'cell ' + (cell.cellType == 'ship' ? 'ship' : '')}>
-                                {cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>}
-                            </div>)
-                    }
+                <div className='aria'>
+                    <div className='field'>
+                        {
+                            this.state.ownField.map((cell: Cell) =>
+                                <div className={'cell ' + (cell.cellType == 'ship' ? 'ship' : '')}>
+                                    {cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>}
+                                </div>)
+                        }
+                    </div>
+                    <div className='field'>
+                        {
+                            this.state.enemyField.map((cell: Cell) =>
+                                <div onClick={() => this.move(cell)}
+                                    className={'cell '
+                                        + (cell.cellType == 'ship' ? 'ship' : '')}>
+                                    {cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>}
+                                </div>)
+                        }
+                    </div>
                 </div>
-                <div className='field'>
-                    {
-                        this.state.enemyField.map((cell: Cell) =>
-                            <div onClick={() => this.move(cell)}
-                                className={'cell '
-                                    + (cell.cellType == 'ship' ? 'ship' : '')}>
-                                {cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>}
-                            </div>)
-                    }
-                </div>
+                {
+                    this.state.ships.map((x: Cell[]) => <div className='aria'>
+                        {
+                            x.map((cell: Cell) => <div className='cell ship'>
+                                {
+                                    cell.isDestroyed ? <FontAwesomeIcon size='xl' fixedWidth icon={icon({ name: 'xmark' })} /> : <></>
+                                }</div>)
+                        }
+                    </div>)
+                }
             </div>
         );
     }

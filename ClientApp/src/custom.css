@@ -20,6 +20,10 @@ code {
   float: left;
 }
 
+.aria {
+  display: flex;
+}
+
 .cell {
   height: 20px;
   width: 20px;

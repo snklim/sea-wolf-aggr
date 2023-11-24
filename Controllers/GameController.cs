@@ -28,13 +28,15 @@ namespace SeaWolfAggr.Controllers
                 {
                     CurrentPlayerId = gameAggr.Game.CurrentPlayerId,
                     OwnField = gameAggr.Game.FirstPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
-                    EnemyField = gameAggr.Game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray()
+                    EnemyField = gameAggr.Game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray(),
+                    Ships = gameAggr.Game.SecondPlayer.Ships.Values.Select(x => x.Select(CellToCellDto).ToArray())
                 }
                 : new GameDto
                 {
                     CurrentPlayerId = gameAggr.Game.CurrentPlayerId,
                     OwnField = gameAggr.Game.SecondPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
-                    EnemyField = gameAggr.Game.SecondPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray()
+                    EnemyField = gameAggr.Game.SecondPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray(),
+                    Ships = gameAggr.Game.FirstPlayer.Ships.Values.Select(x => x.Select(CellToCellDto).ToArray())
                 };
         }
 

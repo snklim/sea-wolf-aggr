@@ -65,9 +65,9 @@ namespace SeaWolfAggr
             }));
 
             _events.Add(ApplyEvent(new CurrentPlayerChanged
-                {
-                    CurrentPlayerId = firstPlayerId
-                }));
+            {
+                CurrentPlayerId = firstPlayerId
+            }));
 
             return Game;
         }
@@ -80,9 +80,12 @@ namespace SeaWolfAggr
             _events.Clear();
 
             var cell = player.OwnField.Cells.First(c => c.Pos == cmd.Pos);
+
+            if (cell.IsDestroyed) return Game;
+
             var affectedCells = new List<Cell>() { cell };
 
-            if (cell.CellType == CellType.Ship && player.Ships[cell.ShipIndex] == 1)
+            if (cell.CellType == CellType.Ship && player.AliveCells(cell.ShipIndex) == 1)
             {
                 affectedCells.AddRange(player.OwnField.Cells.Where(c => cell.Border.Any(b => b == c.Pos)));
             }
