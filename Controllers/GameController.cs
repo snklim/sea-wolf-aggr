@@ -29,14 +29,16 @@ namespace SeaWolfAggr.Controllers
                     CurrentPlayerId = gameAggr.Game.CurrentPlayerId,
                     OwnField = gameAggr.Game.FirstPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
                     EnemyField = gameAggr.Game.FirstPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray(),
-                    Ships = gameAggr.Game.SecondPlayer.Ships.Values.Select(x => x.Select(CellToCellDto).ToArray())
+                    Ships = gameAggr.Game.SecondPlayer.Ships.Values.Select(x => x.Select(CellToCellDto).ToArray()),
+                    WinPlayerId = GetWinPlayerId(gameAggr.Game)
                 }
                 : new GameDto
                 {
                     CurrentPlayerId = gameAggr.Game.CurrentPlayerId,
                     OwnField = gameAggr.Game.SecondPlayer.OwnField.Cells.Select(CellToCellDto).ToArray(),
                     EnemyField = gameAggr.Game.SecondPlayer.EnemyField.Cells.Select(CellToCellDto).ToArray(),
-                    Ships = gameAggr.Game.FirstPlayer.Ships.Values.Select(x => x.Select(CellToCellDto).ToArray())
+                    Ships = gameAggr.Game.FirstPlayer.Ships.Values.Select(x => x.Select(CellToCellDto).ToArray()),
+                    WinPlayerId = GetWinPlayerId(gameAggr.Game)
                 };
         }
 
@@ -59,6 +61,15 @@ namespace SeaWolfAggr.Controllers
             var gameAggr = _games.FirstOrDefault(x => x.Key == cmd.GameId).Value;
             var game = gameAggr.MovePlayer(cmd);
             return null;
+        }
+
+        private static Guid GetWinPlayerId(Game game)
+        {
+            return game.FirstPlayer.IsAlive && game.SecondPlayer.IsAlive
+                                ? Guid.Empty
+                                : game.FirstPlayer.IsAlive
+                                ? game.FirstPlayer.Id
+                                : game.SecondPlayer.Id;
         }
 
         private static CellDto CellToCellDto(Cell cell)

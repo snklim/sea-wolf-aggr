@@ -83,6 +83,8 @@ namespace SeaWolfAggr
 
             if (cell.IsDestroyed) return Game;
 
+            if (!Game.FirstPlayer.IsAlive || !Game.SecondPlayer.IsAlive) return Game;
+
             var affectedCells = new List<Cell>() { cell };
 
             if (cell.CellType == CellType.Ship && player.AliveCells(cell.ShipIndex) == 1)

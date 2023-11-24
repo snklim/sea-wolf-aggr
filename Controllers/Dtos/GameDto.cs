@@ -11,5 +11,6 @@ namespace SeaWolfAggr.Controllers.Dtos
         public IEnumerable<CellDto> EnemyField { get; set; }
         public IEnumerable<CellDto[]> Ships { get; set; }
         public Guid CurrentPlayerId { get; set; }
+        public Guid WinPlayerId { get; set; }
     }
 }

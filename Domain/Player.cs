@@ -9,6 +9,7 @@ namespace SeaWolfAggr
         public Field OwnField { get; private set; }
         public Field EnemyField { get; private set; }
         public Dictionary<int, Cell[]> Ships { get; private set; }
+        public bool IsAlive => Ships.Values.Any(x => x.Any(x => !x.IsDestroyed));
 
         public void AddOwnField(Field field)
         {
